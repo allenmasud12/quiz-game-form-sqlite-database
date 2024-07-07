@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_tts/flutter_tts.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:testgame/word_model.dart';
-
 import 'db_helper.dart';
+import 'dart:async';
 
 class QuizScreen extends StatefulWidget {
   @override
@@ -14,14 +18,33 @@ class _QuizScreenState extends State<QuizScreen> {
   bool? isCorrect;
   int currentScore = 0;
   int currentLevel = 1;
+  User? user;
+  String? selectedOption;
+  FlutterTts flutterTts = FlutterTts();
+  AudioPlayer audioPlayer = AudioPlayer();
+  bool isLoadingQuestion = false;
 
   @override
   void initState() {
     super.initState();
     loadNewQuestion();
+    getCurrentUser();
+    configureTts();
+  }
+
+  Future<void> getCurrentUser() async {
+    user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      await FirebaseAuth.instance.signInAnonymously();
+      user = FirebaseAuth.instance.currentUser;
+    }
   }
 
   Future<void> loadNewQuestion() async {
+    setState(() {
+      isLoadingQuestion = true;
+    });
+
     final word = await dbHelper.fetchRandomWord();
     if (word != null) {
       final incorrectMeanings = await dbHelper.fetchRandomMeanings(word.id!);
@@ -32,7 +55,9 @@ class _QuizScreenState extends State<QuizScreen> {
         currentQuestion = word;
         currentQuestion!.options = options;
         isCorrect = null;
+        selectedOption = null;
       });
+      await flutterTts.speak(currentQuestion!.word);
     } else {
       setState(() {
         currentQuestion = WordModel(
@@ -43,6 +68,62 @@ class _QuizScreenState extends State<QuizScreen> {
         );
       });
     }
+
+    setState(() {
+      isLoadingQuestion = false;
+    });
+  }
+
+  Future<void> saveScore() async {
+    if (user != null) {
+      await FirebaseFirestore.instance.collection('users').doc(user!.uid).set({
+        'score': currentScore,
+        'level': currentLevel,
+      }, SetOptions(merge: true));
+    }
+  }
+
+  Future<void> checkAnswer(String option) async {
+    setState(() {
+      selectedOption = option;
+      isCorrect = option == currentQuestion!.meaning;
+    });
+
+    if (isCorrect!) {
+      currentScore += 10;
+      currentLevel += 1;
+      final responses = ["Awesome!", "Excellent!", "Great!"];
+      final response = (responses..shuffle()).first;
+      await audioPlayer.play(AssetSource('correct.wav'));
+      await flutterTts.speak(response);
+    } else {
+      await audioPlayer.play(AssetSource('wrong.mp3'));
+    }
+
+    await saveScore();
+
+    await Future.delayed(Duration(seconds: 0));
+    loadNewQuestion();
+  }
+
+  void configureTts() {
+    flutterTts.setStartHandler(() {
+      setState(() {
+        print("Playing");
+      });
+    });
+
+    flutterTts.setCompletionHandler(() {
+      setState(() {
+        print("Complete");
+      });
+    });
+
+    flutterTts.setErrorHandler((msg) {
+      setState(() {
+        print("error: $msg");
+      });
+    });
   }
 
   @override
@@ -51,9 +132,10 @@ class _QuizScreenState extends State<QuizScreen> {
       appBar: AppBar(
         title: Text('Dictionary Quiz'),
       ),
-      body: currentQuestion == null
+      body: currentQuestion == null || isLoadingQuestion
           ? Center(child: CircularProgressIndicator())
           : Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Padding(
             padding: const EdgeInsets.all(16.0),
@@ -63,20 +145,16 @@ class _QuizScreenState extends State<QuizScreen> {
             ),
           ),
           ...currentQuestion!.options!.map<Widget>((option) {
+            Color? tileColor;
+            if (selectedOption == option) {
+              tileColor = isCorrect! ? Colors.green : Colors.red;
+            }
             return ListTile(
+              tileColor: tileColor,
               title: Text(option),
-              onTap: () {
-                setState(() {
-                  isCorrect = option == currentQuestion!.meaning;
-                });
-                if (isCorrect!) {
-                  setState(() {
-                    currentScore += 10;
-                    currentLevel += 1;
-                  });
-                }
-                loadNewQuestion();
-              },
+              onTap: selectedOption == null
+                  ? () => checkAnswer(option)
+                  : null,
             );
           }).toList(),
           if (isCorrect != null)
@@ -87,6 +165,15 @@ class _QuizScreenState extends State<QuizScreen> {
                 color: isCorrect! ? Colors.green : Colors.red,
               ),
             ),
+          SizedBox(height: 20),
+          Text(
+            'Score: $currentScore',
+            style: TextStyle(fontSize: 20),
+          ),
+          Text(
+            'Level: $currentLevel',
+            style: TextStyle(fontSize: 20),
+          ),
         ],
       ),
     );
