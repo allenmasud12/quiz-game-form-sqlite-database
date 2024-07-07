@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1074165574978",
+    "project_id": "testgame-67fc2",
+    "storage_bucket": "testgame-67fc2.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1074165574978:android:0c49fbef080ae77e156cdb",
+        "android_client_info": {
+          "package_name": "com.example.testgame"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBOKGR5M8p9ql1_pUMh52dDvZJcAySxhRE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
