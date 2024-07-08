@@ -29,31 +29,31 @@ class DatabaseHelper {
   Future<void> _copyDB(String path) async {
     await Directory(dirname(path)).create(recursive: true);
     ByteData data = await rootBundle.load(join("assets", "test.db"));
-    List<int> bytes =
-    data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+    List<int> bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
 
     await File(path).writeAsBytes(bytes, flush: true);
   }
 
-  Future<WordModel?> fetchRandomWord() async {
+  Future<List<WordModel>> fetchWordsByLevel(int level) async {
     final db = await database;
-    List<Map<String, dynamic>> result =
-    await db.rawQuery('SELECT * FROM testgame ORDER BY RANDOM() LIMIT 1');
-    if (result.isNotEmpty) {
-      return WordModel(
-        id: result[0]['id'],
-        word: result[0]['word'],
-        meaning: result[0]['meaning'],
-      );
-    }
-    return null;
+    int offset = (level - 1) * 20;
+    List<Map<String, dynamic>> result = await db.rawQuery(
+        'SELECT * FROM testgame LIMIT 20 OFFSET ?', [offset]);
+    return result.map((word) => WordModel.fromMap(word)).toList();
   }
 
-  Future<List<String>> fetchRandomMeanings(int excludeId) async {
+  Future<List<String>> fetchRandomMeanings(int excludeId, int limit) async {
     final db = await database;
     List<Map<String, dynamic>> result = await db.rawQuery(
-        'SELECT meaning FROM testgame WHERE id != ? ORDER BY RANDOM() LIMIT 3',
-        [excludeId]);
+        'SELECT meaning FROM testgame WHERE id != ? ORDER BY RANDOM() LIMIT ?',
+        [excludeId, limit]);
     return List.generate(result.length, (i) => result[i]['meaning'] as String);
   }
+
+  Future<int> getTotalWords() async {
+    final db = await database;
+    List<Map<String, dynamic>> result = await db.rawQuery('SELECT COUNT(*) as count FROM testgame');
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
 }
+
