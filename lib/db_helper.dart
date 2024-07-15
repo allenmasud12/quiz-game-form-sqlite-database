@@ -36,10 +36,24 @@ class DatabaseHelper {
 
   Future<List<WordModel>> fetchWordsByLevel(int level) async {
     final db = await database;
-    int offset = (level - 1) * 20;
-    List<Map<String, dynamic>> result = await db.rawQuery(
-        'SELECT * FROM testgame LIMIT 20 OFFSET ?', [offset]);
-    return result.map((word) => WordModel.fromMap(word)).toList();
+    List<Map<String, dynamic>> result = await db.rawQuery('SELECT * FROM testgame');
+    List<WordModel> allWords = result.map((word) => WordModel.fromMap(word)).toList();
+    allWords.shuffle(); // Shuffle the list of all words
+
+    int wordsPerLevel = 20;
+    int totalLevels = 10;
+
+    // Ensure there are enough words to fill the levels
+    while (allWords.length < wordsPerLevel * totalLevels) {
+      List<WordModel> additionalWords = List.from(allWords); // Create a copy of the list
+      allWords.addAll(additionalWords); // Add the copied list
+      allWords.shuffle(); // Shuffle again to mix the duplicates
+    }
+
+    int startIndex = (level - 1) * wordsPerLevel;
+    int endIndex = startIndex + wordsPerLevel;
+
+    return allWords.sublist(startIndex, endIndex);
   }
 
   Future<List<String>> fetchRandomMeanings(int excludeId, int limit) async {

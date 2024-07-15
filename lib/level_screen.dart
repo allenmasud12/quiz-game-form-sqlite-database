@@ -19,10 +19,8 @@ class LevelSelectionScreen extends StatelessWidget {
           } else if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           } else {
-            int totalWords = snapshot.data!;
-            int totalLevels = (totalWords / 20).ceil();
             return ListView.builder(
-              itemCount: totalLevels,
+              itemCount: 10, // Fixed number of levels
               itemBuilder: (context, index) {
                 return ListTile(
                   title: Text('Level ${index + 1}'),
