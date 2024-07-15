@@ -30,6 +30,7 @@ class _QuizScreenState extends State<QuizScreen> {
   WordModel? currentQuestion;
   bool? isCorrect;
   int currentScore = 0;
+  int totalWords = 0;
 
   @override
   void initState() {
@@ -56,6 +57,7 @@ class _QuizScreenState extends State<QuizScreen> {
     if (currentLevelWords != null && currentLevelWords!.isNotEmpty) {
       setState(() {
         isLoading = false;
+        totalWords = currentLevelWords!.length;
       });
       loadNewQuestion();
     } else {
@@ -212,6 +214,10 @@ class _QuizScreenState extends State<QuizScreen> {
           ),
           Text(
             'Level: ${widget.level}',
+            style: TextStyle(fontSize: 20),
+          ),
+          Text(
+            'Progress: ${currentIndex + 1}/$totalWords',
             style: TextStyle(fontSize: 20),
           ),
         ],
