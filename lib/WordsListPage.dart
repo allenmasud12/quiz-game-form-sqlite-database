@@ -8,8 +8,9 @@ import 'word_model.dart';
 
 class QuizScreen extends StatefulWidget {
   final int level;
+  final VoidCallback onComplete;
 
-  QuizScreen({required this.level});
+  QuizScreen({required this.level, required this.onComplete});
 
   @override
   _QuizScreenState createState() => _QuizScreenState();
@@ -21,6 +22,7 @@ class _QuizScreenState extends State<QuizScreen> {
   int currentIndex = 0;
   int correctCount = 0;
   int wrongCount = 0;
+  int totalWords = 0;
   User? user;
   String? selectedOption;
   FlutterTts flutterTts = FlutterTts();
@@ -30,7 +32,6 @@ class _QuizScreenState extends State<QuizScreen> {
   WordModel? currentQuestion;
   bool? isCorrect;
   int currentScore = 0;
-  int totalWords = 0;
 
   @override
   void initState() {
@@ -56,8 +57,8 @@ class _QuizScreenState extends State<QuizScreen> {
     currentLevelWords = await dbHelper.fetchWordsByLevel(widget.level);
     if (currentLevelWords != null && currentLevelWords!.isNotEmpty) {
       setState(() {
-        isLoading = false;
         totalWords = currentLevelWords!.length;
+        isLoading = false;
       });
       loadNewQuestion();
     } else {
@@ -134,6 +135,7 @@ class _QuizScreenState extends State<QuizScreen> {
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
+                widget.onComplete(); // Notify level completion
                 Navigator.pop(context);
               },
               child: Text('OK'),
